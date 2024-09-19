@@ -1,27 +1,43 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'count.dart';  // Archivo del contador
-import 'home.dart';  // Archivo donde tienes tu HomePage con las rutas
+import 'admin_home_page.dart';
+import 'login_page.dart';
+//import 'my_home_page.dart';
+import 'public_user_page.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Rutas UNC',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primarySwatch: Colors.blue,
       ),
-      initialRoute: '/',
-      routes: {
-        '/': (context) => const HomePage(),  // Página inicial
-        '/counter': (context) => const MyHomePage(title: 'Contador'),  // Ruta del contador
-        '/notifications': (context) => const NotificacionesPage(),  // Ruta de notificaciones
+      home: AuthenticationWrapper(),
+    );
+  }
+}
+
+class AuthenticationWrapper extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return CircularProgressIndicator();
+        } else if (snapshot.hasData && snapshot.data != null) {
+          return AdminHomePage();
+        } else {
+          return LoginPage();
+        }
       },
     );
   }

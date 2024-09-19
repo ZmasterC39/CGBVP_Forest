@@ -23,7 +23,7 @@ class HomePage extends StatelessWidget {
               onPressed: () {
                 Navigator.pushNamed(context, '/notifications');
               },
-              child: const Text("Notificaciones"),
+              child: const Text("Notificacionesaaa"),
             ),
           ],
         ),
