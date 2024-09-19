@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1089860813211",
+    "project_id": "cgbvp-forest",
+    "storage_bucket": "cgbvp-forest.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1089860813211:android:dc467417ca8ac76e56613e",
+        "android_client_info": {
+          "package_name": "com.cgbvp.cgbvp_forest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7M1jRbwoQQonddo6X80ryI_6nRrwTJ3M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
