@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'login_page.dart';
 import 'admin_create_record_page.dart';
-import 'notificaciones_page.dart';
+//import 'notificaciones_page.dart';
 import 'package:intl/intl.dart';
 
 class AdminHomePage extends StatelessWidget {
@@ -39,12 +39,16 @@ class AdminHomePage extends StatelessWidget {
             },
             child: const Text("Crear Encuesta UBO"),
           ),
-          ElevatedButton(
+          
+          
+          /*ElevatedButton(
             onPressed: () {
               Navigator.push(context, MaterialPageRoute(builder: (context) => const NotificacionesPage()));
             },
             child: const Text("Notificaciones"),
-          ),
+          )*/
+
+
           const SizedBox(height: 20),
           const Text("Encuestas Aceptadas"),
           Expanded(child: buildAcceptedRecordsList()),
