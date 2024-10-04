@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DesmovilizacionPage extends StatefulWidget {
+  final String incidentId;
+
+  DesmovilizacionPage({required this.incidentId});
+
   @override
   _DesmovilizacionPageState createState() => _DesmovilizacionPageState();
 }
@@ -22,16 +26,26 @@ class _DesmovilizacionPageState extends State<DesmovilizacionPage> {
 
   Future<void> _saveDesmovilizacion() async {
     try {
-      User? user = _auth.currentUser;
-      await _firestore.collection('desmovilizacion').add({
-        'usuarioId': user?.uid ?? '',
-        'fechaHora': _currentDateTime,
-        'estadoIncidente': _selectedIncidentStatus,
+      // Obtener la referencia al documento del incidente usando widget.incidentId
+      DocumentReference incidentRef =
+          _firestore.collection('incidentes').doc(widget.incidentId);
+
+      // Actualizar el documento con los datos de desmovilización
+      await incidentRef.update({
+        'desmovilizacion': {
+          'fechaHora': _currentDateTime,
+          'estadoIncidente': _selectedIncidentStatus,
+        },
+        'fechaFin': Timestamp.now(), // Puedes agregar una fecha de finalización
+        'estado': 'completo',
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Desmovilización guardada correctamente')),
       );
+
+      // Regresar a la página principal
+      Navigator.pushNamedAndRemoveUntil(context, '/public_user', (route) => false);
     } catch (e) {
       print(e);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -39,6 +53,7 @@ class _DesmovilizacionPageState extends State<DesmovilizacionPage> {
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

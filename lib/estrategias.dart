@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:myapp/desmovilizacion.dart';
+import 'identificar_recursos.dart';
 
 class EstrategiasPage extends StatefulWidget {
+  final String incidentId;
+
+  EstrategiasPage({required this.incidentId});
+
   @override
   _EstrategiasPageState createState() => _EstrategiasPageState();
 }
@@ -12,10 +18,10 @@ class _EstrategiasPageState extends State<EstrategiasPage> {
   List<String> _selectedTactics = [];
   String _otherTactic = '';
   final _formKey = GlobalKey<FormState>();
-  
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   late DateTime _startTime;
 
   @override
@@ -26,24 +32,66 @@ class _EstrategiasPageState extends State<EstrategiasPage> {
 
   Future<void> _saveEstrategias() async {
     try {
-      User? user = _auth.currentUser;
-      await _firestore.collection('estrategias').add({
-        'usuarioId': user?.uid ?? '',
-        'horaInicio': _startTime,
-        'estrategia': _selectedStrategy,
-        'tacticas': _selectedTactics,
-        'otraTactica': _otherTactic,
+      DocumentReference incidentRef =
+          _firestore.collection('incidentes').doc(widget.incidentId);
+
+      await incidentRef.update({
+        'estrategias': {
+          // ... tus campos de estrategias
+          'horaInicio': _startTime,
+          'estrategia': _selectedStrategy,
+          'tacticas': _selectedTactics,
+          'otraTactica': _otherTactic,
+        },
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Estrategias guardadas correctamente')),
       );
+
+      // Preguntar si desea continuar
+      _showContinueDialog(widget.incidentId);
     } catch (e) {
+      // Manejo de errores
       print(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al guardar las estrategias')),
       );
     }
+  }
+
+  void _showContinueDialog(String incidentId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('¿Deseas continuar al siguiente paso?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar el diálogo
+              // Regresar a la página principal
+              Navigator.pushNamedAndRemoveUntil(
+                  context, '/public_user', (route) => false);
+            },
+            child: Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Cerrar el diálogo
+              // Navegar a la siguiente página
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      DesmovilizacionPage(incidentId: widget.incidentId),
+                ),
+              );
+            },
+            child: Text('Sí'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -82,7 +130,8 @@ class _EstrategiasPageState extends State<EstrategiasPage> {
                     child: Text(value),
                   );
                 }).toList(),
-                decoration: InputDecoration(labelText: 'Asignación de Estrategia'),
+                decoration:
+                    InputDecoration(labelText: 'Asignación de Estrategia'),
               ),
               SizedBox(height: 20),
               Text(
@@ -155,7 +204,8 @@ class _EstrategiasPageState extends State<EstrategiasPage> {
                 },
               ),
               TextFormField(
-                decoration: InputDecoration(labelText: 'Otros (ingresa manualmente)'),
+                decoration:
+                    InputDecoration(labelText: 'Otros (ingresa manualmente)'),
                 onChanged: (value) {
                   _otherTactic = value;
                 },

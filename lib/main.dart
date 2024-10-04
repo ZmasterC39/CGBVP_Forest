@@ -16,15 +16,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'CGBVP Emergencias Forestales',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        
+        primarySwatch: Colors.green,
+        hintColor: Colors.orangeAccent,
+        fontFamily: 'Roboto',
       ),
       home: AuthenticationWrapper(),
       routes: {
         '/login': (context) => LoginPage(),
         '/create_user': (context) => CreateUserPage(),
-        '/public_user': (context) => PublicUserPage(),
+        '/public_user': (context) => PublicUserPage(), // Elimina incidentId
         '/profile': (context) => ProfilePage(),
       },
     );
@@ -37,11 +40,15 @@ class AuthenticationWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          // El usuario está autenticado
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ); 
+        } else if (snapshot.hasData) {
+          // Usuario autenticado, redirige a PublicUserPage
           return PublicUserPage();
         } else {
-          // El usuario no está autenticado
+          // Usuario no autenticado
           return LoginPage();
         }
       },

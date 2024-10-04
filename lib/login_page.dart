@@ -27,15 +27,18 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       await _auth.signInWithCredential(credential);
-      Navigator.pushReplacementNamed(context, '/public_user');
+      _navigateToPublicUserPage();
     } catch (e) {
       print(e);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Error al iniciar sesión con Google'),
+      ));
     }
   }
 
-  // Función para detectar si es email o usuario
+  // Detectar si es email o nombre de usuario
   bool _isEmail(String input) {
-    final RegExp emailRegex = RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+    final RegExp emailRegex = RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
     return emailRegex.hasMatch(input);
   }
 
@@ -52,29 +55,33 @@ class _LoginPageState extends State<LoginPage> {
             password: password,
           );
         } else {
-          // Buscar el usuario por nombre de usuario
-          // Aquí debes implementar una función para mapear el nombre de usuario al email
+          // Mapea el nombre de usuario a un correo electrónico
           String email = await _getEmailFromUsername(login);
           await _auth.signInWithEmailAndPassword(
             email: email,
             password: password,
           );
         }
-        // Redirigir a la página pública
-        Navigator.pushReplacementNamed(context, '/public_user');
+        _navigateToPublicUserPage();
       } catch (e) {
         print(e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al iniciar sesión')),
+          SnackBar(content: Text('Error al iniciar sesión: ${e.toString()}')),
         );
       }
     }
   }
 
-  // Función simulada para obtener el email a partir del nombre de usuario
+  // Navegar a PublicUserPage después del inicio de sesión
+  void _navigateToPublicUserPage() {
+    Navigator.pushReplacementNamed(context, '/public_user');
+  }
+
+  // Simulación para obtener el email a partir del nombre de usuario
   Future<String> _getEmailFromUsername(String username) async {
-    // Aquí puedes implementar una búsqueda real en una base de datos
-    return "email@example.com";  // Simulación: retorna un email válido
+    // Aquí deberías implementar la lógica para obtener el correo basado en el nombre de usuario.
+    // Esto es solo un ejemplo de cómo podrías hacerlo.
+    return "email@example.com"; // Simulación, debes reemplazarlo con una consulta real
   }
 
   @override

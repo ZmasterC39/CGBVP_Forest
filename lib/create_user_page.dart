@@ -22,6 +22,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
   String _selectedTaskForce = 'FT 1 Cusco';
   final _formKey = GlobalKey<FormState>();
 
+  // Método para crear el usuario
   void _createUser() async {
     if (_formKey.currentState!.validate()) {
       String email = _emailController.text;
@@ -41,10 +42,19 @@ class _CreateUserPageState extends State<CreateUserPage> {
 
         User? user = userCredential.user;
 
-        // Validar si existe la colección de 'users', si no, crearla
-        DocumentSnapshot doc = await _firestore.collection('users').doc(user!.uid).get();
+        // Si el usuario es nulo, mostrar un error
+        if (user == null) {
+          throw FirebaseAuthException(
+            code: 'user-not-found',
+            message: 'No se pudo crear el usuario correctamente',
+          );
+        }
+
+        // Verificar si ya existe un documento para este usuario en Firestore
+        DocumentSnapshot doc = await _firestore.collection('users').doc(user.uid).get();
+        
+        // Si no existe, creamos un nuevo documento para el usuario
         if (!doc.exists) {
-          // Guardar la información del usuario en Firestore
           await _firestore.collection('users').doc(user.uid).set({
             'username': username,
             'name': name,
@@ -56,19 +66,21 @@ class _CreateUserPageState extends State<CreateUserPage> {
           });
         }
 
-        // Actualizar el nombre de usuario en Firebase Authentication
+        // Actualizar el nombre de usuario en el perfil de Firebase Authentication
         await user.updateDisplayName(username);
 
-        // Muestra un mensaje de éxito
+        // Mostramos un mensaje de éxito
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Usuario $username creado exitosamente')),
         );
 
+        // Redirigimos a la página de usuario público
         Navigator.pushReplacementNamed(context, '/public_user');
       } catch (e) {
+        // Mostrar un error en caso de fallo en la creación del usuario
         print(e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al crear el usuario')),
+          SnackBar(content: Text('Error al crear el usuario: ${e.toString()}')),
         );
       }
     }
@@ -147,7 +159,7 @@ class _CreateUserPageState extends State<CreateUserPage> {
                 },
                 items: <String>[
                   'FT 1 Cusco', 'FT 2 Lima', 'FT 3 Cajamarca', 'FT 4 Ancash', 'FT 5 Junin Centro',
-                  'FT 6 Piura', 'FT 7 Yurimaguas-San Martín', 'FT 8 Apurimac', 'FT 9 Amazonas', 
+                  'FT 6 Piura', 'FT 7 Yurimaguas-San Martín', 'FT 8 Apurimac', 'FT 9 Amazonas',
                   'FT 10 Ayacucho-VRAEM', 'FT 11 Huánuco', 'FT 12 Puno', 'FT 13 Arequipa', 'FT 14 Tacna',
                   'FT 15 Ucayali', 'FT 16 Junin Oriente', 'FT 17 Huancavelica', 'FT 18 Ica', 'FT 19 Moquegua',
                   'FT 20 Loreto', 'FT 21 Tumbes', 'FT 22 Madre de Dios', 'FT 23 Lambayeque', 'FT 24 La Libertad',
