@@ -28,8 +28,7 @@ class IncidentDetailPage extends StatelessWidget {
             children: [
               Text('Código de Bomberos: ${data['evaluacionInicial']['codigoBomberos'] ?? ''}'),
               Text('Ubicación: ${data['evaluacionInicial']['ubicacionGeografica'] ?? ''}'),
-              // Agrega más campos según necesites
-              // ...
+              
             ],
           );
         },

@@ -1,114 +1,141 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class IdentificarRecursosPage extends StatefulWidget {
+class EvaluacionDesempenoPage extends StatefulWidget {
   final String incidentId;
 
-  IdentificarRecursosPage({required this.incidentId});
+  EvaluacionDesempenoPage({required this.incidentId});
 
   @override
-  _IdentificarRecursosPageState createState() => _IdentificarRecursosPageState();
+  _EvaluacionDesempenoPageState createState() => _EvaluacionDesempenoPageState();
 }
 
-class _IdentificarRecursosPageState extends State<IdentificarRecursosPage> {
-  final _bomberosController = TextEditingController();
+class _EvaluacionDesempenoPageState extends State<EvaluacionDesempenoPage> {
+  final _nombreController = TextEditingController();
   final _uboController = TextEditingController();
+
   String _selectedGrade = 'Seccionario';
-  String _selectedPosition = 'Comandante de Incidente (CI)';
+  String _selectedPosition = 'Combatiente (COIF)';
+  String _selectedEvaluacion = 'Satisfactorio';
+
+  final List<String> _grades = [
+    'Seccionario',
+    'Sub Teniente',
+    'Teniente',
+    'Capitan',
+    'Tnte. Brigadier',
+    'Brigadier',
+    'Brigadier Mayor',
+    'Brigadier General',
+  ];
+
+  final List<String> _positions = [
+    'Combatiente (COIF)',
+    'Jefe de Cuadrilla (JECU)',
+    'Comandante de Incidente (CIT5)',
+    'Jefe Brigada (JEFB)',
+    'Comandante de Incidente (CIT4)',
+  ];
+
+  final List<String> _evaluaciones = [
+    'Deficiente',
+    'Necesita mejorar',
+    'Satisfactorio',
+    'Superior',
+  ];
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  bool _isLoading = true;
+  Future<void> _saveEvaluacionDesempeno() async {
+    try {
+      DocumentReference incidentRef = _firestore.collection('incidentes').doc(widget.incidentId);
+
+      // Crear una nueva evaluación de desempeño
+      await _firestore.collection('Evaluación de desempeño').add({
+        'incidentId': widget.incidentId,
+        'nombre': _nombreController.text,
+        'grado': _selectedGrade,
+        'ubo': int.tryParse(_uboController.text) ?? 0,
+        'posicion': _selectedPosition,
+        'evaluacion': _selectedEvaluacion,
+        'fechaHora': Timestamp.now(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Evaluación de desempeño guardada correctamente')),
+      );
+
+      // Preguntar al usuario si desea agregar otra evaluación
+      _showContinueDialog();
+    } catch (e) {
+      print('Error al guardar evaluación de desempeño: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar la evaluación de desempeño')),
+      );
+    }
+  }
+
+  void _showContinueDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('¿Desea agregar otra evaluación de desempeño?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Cerrar el diálogo
+                // Regresar a la página anterior o principal
+                Navigator.pop(context);
+              },
+              child: Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Cerrar el diálogo
+                // Limpiar los campos para una nueva entrada
+                _nombreController.clear();
+                _uboController.clear();
+                setState(() {
+                  _selectedGrade = 'Seccionario';
+                  _selectedPosition = 'Combatiente (COIF)';
+                  _selectedEvaluacion = 'Satisfactorio';
+                });
+              },
+              child: Text('Sí'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
-  void initState() {
-    super.initState();
-    _loadExistingData();
-  }
-
-  Future<void> _loadExistingData() async {
-    try {
-      DocumentSnapshot incidentSnapshot =
-          await _firestore.collection('incidentes').doc(widget.incidentId).get();
-
-      if (incidentSnapshot.exists) {
-        var data = incidentSnapshot.data() as Map<String, dynamic>;
-        var recursos = data['recursos'] as Map<String, dynamic>?;
-
-        if (recursos != null) {
-          _bomberosController.text = recursos['bomberos'] ?? '';
-          _uboController.text = recursos['ubo'] ?? '';
-          _selectedGrade = recursos['grado'] ?? 'Seccionario';
-          _selectedPosition = recursos['posicion'] ?? 'Comandante de Incidente (CI)';
-        }
-      }
-    } catch (e) {
-      print('Error al cargar datos existentes: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al cargar datos existentes')),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _saveRecursos() async {
-    try {
-      DocumentReference incidentRef =
-          _firestore.collection('incidentes').doc(widget.incidentId);
-
-      await incidentRef.update({
-        'recursos': {
-          'bomberos': _bomberosController.text,
-          'grado': _selectedGrade,
-          'ubo': _uboController.text,
-          'posicion': _selectedPosition,
-          'fechaHora': Timestamp.now(),
-        },
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Recursos guardados correctamente')),
-      );
-
-      Navigator.pop(context); // Regresar a la página anterior
-    } catch (e) {
-      print('Error al guardar recursos: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar los recursos')),
-      );
-    }
+  void dispose() {
+    _nombreController.dispose();
+    _uboController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      // Mostrar un indicador de carga mientras se obtienen los datos
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Identificar Recursos'),
-        ),
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: Text('Identificar Recursos'),
+        title: Text('Evaluación de Desempeño'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
+            // Campo: Nombre y apellidos del personal evaluado
             TextFormField(
-              controller: _bomberosController,
-              decoration: InputDecoration(labelText: 'Bomberos que arribaron a la escena'),
-              keyboardType: TextInputType.number,
+              controller: _nombreController,
+              decoration: InputDecoration(
+                labelText: 'Nombre y apellidos del personal evaluado',
+              ),
             ),
+            SizedBox(height: 16),
+            // Campo: Grado del personal evaluado
             DropdownButtonFormField<String>(
               value: _selectedGrade,
               onChanged: (String? newValue) {
@@ -116,28 +143,25 @@ class _IdentificarRecursosPageState extends State<IdentificarRecursosPage> {
                   _selectedGrade = newValue!;
                 });
               },
-              items: <String>[
-                'Seccionario',
-                'Sub Teniente',
-                'Teniente',
-                'Capitán',
-                'Tnte. Brigadier',
-                'Brigadier',
-                'Brigadier Mayor',
-                'Brigadier General',
-              ].map<DropdownMenuItem<String>>((String value) {
+              items: _grades.map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
                 );
               }).toList(),
-              decoration: InputDecoration(labelText: 'Grado del personal'),
+              decoration: InputDecoration(labelText: 'Grado del personal evaluado'),
             ),
+            SizedBox(height: 16),
+            // Campo: UBO del personal evaluado
             TextFormField(
               controller: _uboController,
-              decoration: InputDecoration(labelText: 'UBO'),
+              decoration: InputDecoration(
+                labelText: 'UBO del personal evaluado',
+              ),
               keyboardType: TextInputType.number,
             ),
+            SizedBox(height: 16),
+            // Campo: Posición
             DropdownButtonFormField<String>(
               value: _selectedPosition,
               onChanged: (String? newValue) {
@@ -145,12 +169,7 @@ class _IdentificarRecursosPageState extends State<IdentificarRecursosPage> {
                   _selectedPosition = newValue!;
                 });
               },
-              items: <String>[
-                'Comandante de Incidente (CI)',
-                'Combatiente de Incendios Forestal (COIF)',
-                'Jefe de Cuadrilla (JECU)',
-                'Jefe Brigada (JEFB)',
-              ].map<DropdownMenuItem<String>>((String value) {
+              items: _positions.map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -158,10 +177,31 @@ class _IdentificarRecursosPageState extends State<IdentificarRecursosPage> {
               }).toList(),
               decoration: InputDecoration(labelText: 'Posición'),
             ),
+            SizedBox(height: 16),
+            // Campo: Evaluación del conocimiento del trabajo, desempeño, actitud, iniciativa, capacidad física y seguridad
+            DropdownButtonFormField<String>(
+              value: _selectedEvaluacion,
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedEvaluacion = newValue!;
+                });
+              },
+              items: _evaluaciones.map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              decoration: InputDecoration(
+                labelText:
+                    'Evaluación del conocimiento del trabajo, desempeño, actitud, iniciativa, capacidad física y seguridad',
+              ),
+            ),
             SizedBox(height: 20),
+            // Botón para guardar
             ElevatedButton(
-              onPressed: _saveRecursos,
-              child: Text('Guardar Recursos'),
+              onPressed: _saveEvaluacionDesempeno,
+              child: Text('Guardar Evaluación'),
             ),
           ],
         ),

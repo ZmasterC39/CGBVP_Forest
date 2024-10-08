@@ -13,11 +13,16 @@ class _EvaluacionPageState extends State<EvaluacionPage> {
   final _bomberoCodeController = TextEditingController();
   final _sectorController = TextEditingController();
   final _tamanoController = TextEditingController();
+  final _otherFuelTypeController = TextEditingController(); // Controlador para el campo "Otros" de tipo de combustible
+  final _otherRiskValueController = TextEditingController(); // Controlador para el campo "Otros" de valores de riesgo
 
   String _selectedFuelType = 'Pastizales';
   String _selectedSlope = 'Plana o ligeramente inclinada (0-5%)';
   String _selectedFlameLength = 'Baja (hasta 1)';
   String _selectedRiskValue = 'Viviendas';
+  
+  bool _isOtherFuelTypeSelected = false; // Para rastrear si se selecciona "Otros" en tipo de combustible
+  bool _isOtherRiskValueSelected = false; // Para rastrear si se selecciona "Otros" en valores de riesgo
 
   String? _latitude;
   String? _longitude;
@@ -49,88 +54,90 @@ class _EvaluacionPageState extends State<EvaluacionPage> {
     }
   }
 
+  Future<void> _saveEvaluation() async {
+    try {
+      User? user = _auth.currentUser;
 
-Future<void> _saveEvaluation() async {
-  try {
-    User? user = _auth.currentUser;
+      // Crear el documento del incidente y obtener el incidentId
+      DocumentReference incidentRef = await _firestore.collection('incidentes').add({
+        'usuarioId': user?.uid ?? '',
+        'fechaInicio': Timestamp.now(),
+        'estado': 'incompleto', // Agregar campo de estado
+      });
 
-    // Crear el documento del incidente y obtener el incidentId
-    DocumentReference incidentRef = await _firestore.collection('incidentes').add({
-      'usuarioId': user?.uid ?? '',
-      'fechaInicio': Timestamp.now(),
-      'estado': 'incompleto', // Agregar campo de estado
-    });
+      String incidentId = incidentRef.id;
 
-    String incidentId = incidentRef.id;
+      // Obtener el tipo de combustible seleccionado o personalizado
+      String fuelType = _isOtherFuelTypeSelected
+          ? _otherFuelTypeController.text
+          : _selectedFuelType;
 
-    // Guardar la evaluación inicial como campo en el documento
-    await incidentRef.update({
-      'evaluacionInicial': {
-        // ... tus campos de evaluación inicial
-        'codigoBomberos': _bomberoCodeController.text,
-        'fuerzaTareaPRIF': user?.uid ?? '', // O como lo obtengas
-        'fechaHora': Timestamp.now(),
-        'coordenadas': {
-          'latitud': _latitude,
-          'longitud': _longitude,
+      // Obtener el valor de riesgo seleccionado o personalizado
+      String riskValue = _isOtherRiskValueSelected
+          ? _otherRiskValueController.text
+          : _selectedRiskValue;
+
+      // Guardar la evaluación inicial como campo en el documento
+      await incidentRef.update({
+        'evaluacionInicial': {
+          'codigoBomberos': _bomberoCodeController.text,
+          'fuerzaTareaPRIF': user?.uid ?? '', // O como lo obtengas
+          'fechaHora': Timestamp.now(),
+          'coordenadas': {
+            'latitud': _latitude,
+            'longitud': _longitude,
+          },
+          'ubicacionGeografica': _sectorController.text,
+          'tipoCombustible': fuelType,
+          'tamanoHectareas': _tamanoController.text,
+          'pendiente': _selectedSlope,
+          'longitudLlama': _selectedFlameLength,
+          'valoresRiesgo': riskValue,
         },
-        'ubicacionGeografica': _sectorController.text,
-        'tipoCombustible': _selectedFuelType,
-        'tamanoHectareas': _tamanoController.text,
-        'pendiente': _selectedSlope,
-        'longitudLlama': _selectedFlameLength,
-        'valoresRiesgo': _selectedRiskValue,
-      },
-    });
+      });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Evaluación guardada correctamente')),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Evaluación guardada correctamente')),
+      );
 
-    // Preguntar al usuario si desea continuar
-    _showContinueDialog(incidentId);
-  } catch (e) {
-    // Manejo de errores
-    print(e);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error al guardar la evaluación')),
+      _showContinueDialog(incidentId);
+    } catch (e) {
+      print(e);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al guardar la evaluación')),
+      );
+    }
+  }
+
+  void _showContinueDialog(String incidentId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('¿Deseas continuar al siguiente paso?'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(context, '/public_user', (route) => false);
+            },
+            child: Text('No'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EstrategiasPage(incidentId: incidentId),
+                ),
+              );
+            },
+            child: Text('Sí'),
+          ),
+        ],
+      ),
     );
   }
-}
-
-// Método para mostrar el diálogo de confirmación
-void _showContinueDialog(String incidentId) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('¿Deseas continuar al siguiente paso?'),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context); // Cerrar el diálogo
-            // Si el usuario no desea continuar, regresar a la página principal
-            Navigator.pushNamedAndRemoveUntil(context, '/public_user', (route) => false);
-          },
-          child: Text('No'),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context); // Cerrar el diálogo
-            // Navegar a la siguiente página pasando el incidentId
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => EstrategiasPage(incidentId: incidentId),
-              ),
-            );
-          },
-          child: Text('Sí'),
-        ),
-      ],
-    ),
-  );
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -167,6 +174,7 @@ void _showContinueDialog(String incidentId) {
               onChanged: (String? newValue) {
                 setState(() {
                   _selectedFuelType = newValue!;
+                  _isOtherFuelTypeSelected = newValue == 'Otros'; // Comprobar si se selecciona "Otros"
                 });
               },
               items: <String>[
@@ -180,6 +188,13 @@ void _showContinueDialog(String incidentId) {
               }).toList(),
               decoration: InputDecoration(labelText: 'Tipo de Combustible'),
             ),
+            // Mostrar el campo de texto si se selecciona "Otros"
+            if (_isOtherFuelTypeSelected)
+              TextFormField(
+                controller: _otherFuelTypeController,
+                decoration: InputDecoration(labelText: 'Especifique el tipo de combustible'),
+                keyboardType: TextInputType.text,
+              ),
             TextFormField(
               controller: _tamanoController,
               decoration: InputDecoration(labelText: 'Tamaño estimado (Hectáreas)'),
@@ -225,6 +240,7 @@ void _showContinueDialog(String incidentId) {
               onChanged: (String? newValue) {
                 setState(() {
                   _selectedRiskValue = newValue!;
+                  _isOtherRiskValueSelected = newValue == 'Otros'; // Comprobar si se selecciona "Otros"
                 });
               },
               items: <String>[
@@ -237,6 +253,13 @@ void _showContinueDialog(String incidentId) {
               }).toList(),
               decoration: InputDecoration(labelText: 'Valores expuestos al riesgo'),
             ),
+            // Mostrar el campo de texto si se selecciona "Otros" en valores de riesgo
+            if (_isOtherRiskValueSelected)
+              TextFormField(
+                controller: _otherRiskValueController,
+                decoration: InputDecoration(labelText: 'Especifique el valor expuesto al riesgo'),
+                keyboardType: TextInputType.text,
+              ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: _saveEvaluation,

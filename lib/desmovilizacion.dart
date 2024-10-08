@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class DesmovilizacionPage extends StatefulWidget {
@@ -12,31 +11,60 @@ class DesmovilizacionPage extends StatefulWidget {
 }
 
 class _DesmovilizacionPageState extends State<DesmovilizacionPage> {
-  String _selectedIncidentStatus = 'Activo'; // Opción predeterminada
-  late DateTime _currentDateTime; // Fecha y hora predeterminada
+  // Campos nuevos
+  late DateTime _fechaHora; // Fecha y hora preestablecida
+  String _selectedPotencialCrecimiento = 'Nulo';
+  String _selectedEstadoIncidente = 'Activo';
+  List<String> _selectedIncidentesRegistrados = [];
+  String _otherIncidente = '';
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  // Opciones para los campos
+  final List<String> potencialCrecimientoOptions = [
+    'Nulo',
+    'Bajo',
+    'Moderado',
+    'Alto',
+    'Muy alto',
+  ];
+
+  final List<String> estadoIncidenteOptions = [
+    'Activo',
+    'Controlado',
+    'Extinguido',
+    'Otro',
+  ];
+
+  final List<String> incidentesRegistradosOptions = [
+    'Lesiones',
+    'Golpe de calor',
+    'Deshidratación',
+    'Conflictos',
+    'Tráfico de radios',
+    'Otros',
+  ];
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void initState() {
     super.initState();
-    _currentDateTime = DateTime.now(); // Capturar la fecha y hora actual al cargar la página
+    _fechaHora = DateTime.now(); // Fecha y hora preestablecida por el sistema
   }
 
   Future<void> _saveDesmovilizacion() async {
     try {
-      // Obtener la referencia al documento del incidente usando widget.incidentId
       DocumentReference incidentRef =
           _firestore.collection('incidentes').doc(widget.incidentId);
 
-      // Actualizar el documento con los datos de desmovilización
       await incidentRef.update({
         'desmovilizacion': {
-          'fechaHora': _currentDateTime,
-          'estadoIncidente': _selectedIncidentStatus,
+          'fechaHora': Timestamp.fromDate(_fechaHora),
+          'potencialCrecimiento': _selectedPotencialCrecimiento,
+          'estadoIncidenteAlRetirarse': _selectedEstadoIncidente,
+          'incidentesRegistrados': _selectedIncidentesRegistrados,
+          'otroIncidenteRegistrado': _otherIncidente,
         },
-        'fechaFin': Timestamp.now(), // Puedes agregar una fecha de finalización
+        'fechaFin': Timestamp.fromDate(_fechaHora),
         'estado': 'completo',
       });
 
@@ -45,15 +73,15 @@ class _DesmovilizacionPageState extends State<DesmovilizacionPage> {
       );
 
       // Regresar a la página principal
-      Navigator.pushNamedAndRemoveUntil(context, '/public_user', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+          context, '/public_user', (route) => false);
     } catch (e) {
-      print(e);
+      print('Error al guardar desmovilización: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al guardar la desmovilización')),
       );
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -65,29 +93,103 @@ class _DesmovilizacionPageState extends State<DesmovilizacionPage> {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            Text(
-              'Fecha y hora de desmovilización: ${_currentDateTime.toLocal()}',
-              style: TextStyle(fontSize: 16),
+            // Fecha y hora (preestablecido, solo mostrar)
+            ListTile(
+              leading: Icon(Icons.calendar_today),
+              title: Text(
+                  'Fecha y hora: ${_fechaHora.toLocal().toString().substring(0, 16)}'),
             ),
             SizedBox(height: 20),
+
+            // Potencial crecimiento en el próximo periodo operacional
             DropdownButtonFormField<String>(
-              value: _selectedIncidentStatus,
+              value: _selectedPotencialCrecimiento,
               onChanged: (String? newValue) {
                 setState(() {
-                  _selectedIncidentStatus = newValue!;
+                  _selectedPotencialCrecimiento = newValue!;
                 });
               },
-              items: <String>[
-                'Activo', 'Controlado', 'Extinguido',
-              ].map<DropdownMenuItem<String>>((String value) {
+              items: potencialCrecimientoOptions
+                  .map<DropdownMenuItem<String>>((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
                 );
               }).toList(),
-              decoration: InputDecoration(labelText: 'Estado del incidente'),
+              decoration: InputDecoration(
+                  labelText:
+                      'Potencial crecimiento en el próximo periodo operacional'),
             ),
             SizedBox(height: 20),
+
+            // Cuál es el estado del incidente al momento de retirarse
+            DropdownButtonFormField<String>(
+              value: _selectedEstadoIncidente,
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedEstadoIncidente = newValue!;
+                });
+              },
+              items: estadoIncidenteOptions
+                  .map<DropdownMenuItem<String>>((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              decoration: InputDecoration(
+                  labelText:
+                      'Estado del incidente al momento de retirarse'),
+            ),
+            SizedBox(height: 20),
+
+            // Incidentes registrados durante la operación
+            Text(
+              'Incidentes registrados durante la operación',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            ...incidentesRegistradosOptions.map((incidente) {
+              if (incidente != 'Otros') {
+                return CheckboxListTile(
+                  title: Text(incidente),
+                  value: _selectedIncidentesRegistrados.contains(incidente),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value == true) {
+                        _selectedIncidentesRegistrados.add(incidente);
+                      } else {
+                        _selectedIncidentesRegistrados.remove(incidente);
+                      }
+                    });
+                  },
+                );
+              } else {
+                return CheckboxListTile(
+                  title: Text('Otros'),
+                  value: _selectedIncidentesRegistrados.contains('Otros'),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value == true) {
+                        _selectedIncidentesRegistrados.add('Otros');
+                      } else {
+                        _selectedIncidentesRegistrados.remove('Otros');
+                        _otherIncidente = '';
+                      }
+                    });
+                  },
+                );
+              }
+            }).toList(),
+            if (_selectedIncidentesRegistrados.contains('Otros'))
+              TextFormField(
+                decoration: InputDecoration(labelText: 'Especificar otros'),
+                onChanged: (value) {
+                  _otherIncidente = value;
+                },
+              ),
+            SizedBox(height: 20),
+
+            // Botón para guardar
             ElevatedButton(
               onPressed: _saveDesmovilizacion,
               child: Text('Guardar Desmovilización'),

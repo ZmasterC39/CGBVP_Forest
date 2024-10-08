@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:myapp/indentifical_personal.dart';
 import 'IncidentDetailPage.dart';
 import 'evaluacion.dart';
 import 'estrategias.dart';
@@ -58,12 +59,12 @@ class IncidentListPage extends StatelessWidget {
                   onSelected: (String value) {
                     if (value == 'Continuar') {
                       _continueIncident(context, incidenteId, data);
-                    } else if (value == 'EvaluacionRecursos') {
+                    } else if (value == 'EvaluarDesempeno') {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              IdentificarRecursosPage(incidentId: incidenteId),
+                              EvaluacionDesempenoPage(incidentId: incidenteId),
                         ),
                       );
                     } else if (value == 'Detalles') {
@@ -91,10 +92,11 @@ class IncidentListPage extends StatelessWidget {
 
                     // Mostrar 'Evaluación de Recursos' si aún no se ha hecho
                     if (!recursosIdentificados) {
+                      // Opción para 'Evaluar Desempeño'
                       options.add(
                         PopupMenuItem<String>(
-                          value: 'EvaluacionRecursos',
-                          child: Text('Evaluación de Recursos'),
+                          value: 'EvaluarDesempeno',
+                          child: Text('Evaluar Desempeño'),
                         ),
                       );
                     }
@@ -131,13 +133,23 @@ class IncidentListPage extends StatelessWidget {
   void _continueIncident(
       BuildContext context, String incidentId, Map<String, dynamic> data) {
     if (!data.containsKey('estrategias')) {
+      // Continuar con EstrategiasPage
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => EstrategiasPage(incidentId: incidentId),
         ),
       );
+    } else if (!data.containsKey('identificacionPersonal')) {
+      // Continuar con IdentificarPersonalPage
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => IdentificarPersonalPage(incidentId: incidentId),
+        ),
+      );
     } else if (!data.containsKey('desmovilizacion')) {
+      // Continuar con DesmovilizacionPage
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -145,10 +157,11 @@ class IncidentListPage extends StatelessWidget {
         ),
       );
     } else {
-      // Este caso no debería ocurrir si el estado se actualiza correctamente
+      // El incidente está completo
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('El incidente ya está completo')),
       );
     }
+// Suggested code may be subject to a license. Learn more: ~LicenseLog:2277197759.
   }
 }
